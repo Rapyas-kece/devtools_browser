@@ -1,0 +1,15 @@
+{
+  "system_status": "ONLINE",
+  "build_version": "v3.4.12-production",
+  "telemetry": {
+    "latency_ms": 42,
+    "active_nodes": 8,
+    "cluster_health": "OPTIMAL"
+  },
+  "diagnostics": {
+    "notice": "Normal users only see basic telemetry. Elevated clearance is stored in the hidden auth subsystem.",
+    "internal_routing_hint": "Endpoint berikutnya untuk otorisasi supervisor ada di:",
+    "next_stage_url": "./api_stage2_privilege.json",
+    "required_query_key": "auth_token=CYBER_CLEARANCE_2026"
+  }
+}

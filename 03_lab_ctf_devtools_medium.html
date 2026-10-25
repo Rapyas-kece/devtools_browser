@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 03 - CTF DevTools Medium: 5 Tabs of Exploitation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070913;
+      --card-bg: rgba(15, 23, 42, 0.8);
+      --card-border: rgba(56, 189, 248, 0.2);
+      --accent-cyan: #38bdf8;
+      --accent-cyan-glow: rgba(56, 189, 248, 0.4);
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-purple: #a855f7;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --code-bg: #030712;
+      --tab-active-bg: rgba(56, 189, 248, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.12) 0px, transparent 40%),
+        radial-gradient(circle at 90% 90%, rgba(168, 85, 247, 0.12) 0px, transparent 40%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 30px 30px, 30px 30px;
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      padding: 2rem 1rem 4rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      max-width: 980px;
+      width: 100%;
+    }
+
+    /* HEADER */
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1.1rem;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 9999px;
+      color: var(--accent-cyan);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 0.85rem;
+      box-shadow: 0 0 15px var(--accent-cyan-glow);
+    }
+
+    h1 {
+      font-size: 2.3rem;
+      font-weight: 800;
+      line-height: 1.25;
+      background: linear-gradient(135deg, #ffffff 30%, #38bdf8 70%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 720px;
+      margin: 0 auto 1.5rem;
+      line-height: 1.6;
+    }
+
+    /* CTF SCOREBOARD STATS */
+    .scoreboard-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.25rem 1.75rem;
+      margin-bottom: 2rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .stats-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+      font-family: 'Fira Code', monospace;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 9999px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #38bdf8, #a855f7, #10b981);
+      border-radius: 9999px;
+      transition: width 0.5s ease;
+      box-shadow: 0 0 12px var(--accent-cyan);
+    }
+
+    .reset-btn {
+      background: transparent;
+      border: 1px solid rgba(244, 63, 94, 0.4);
+      color: #fb7185;
+      font-size: 0.8rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .reset-btn:hover {
+      background: rgba(244, 63, 94, 0.15);
+      border-color: #f43f5e;
+    }
+
+    /* 5-TAB NAVIGATION BUTTONS */
+    .tabs-nav {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      scrollbar-width: thin;
+    }
+
+    .tab-btn {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      padding: 0.75rem 1.25rem;
+      border-radius: 10px 10px 0 0;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      position: relative;
+    }
+
+    .tab-btn:hover {
+      background: rgba(56, 189, 248, 0.08);
+      color: #fff;
+    }
+
+    .tab-btn.active {
+      background: var(--tab-active-bg);
+      border-color: var(--accent-cyan);
+      color: #fff;
+      box-shadow: 0 -2px 10px rgba(56, 189, 248, 0.15);
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-cyan);
+    }
+
+    .tab-btn.solved {
+      border-color: rgba(16, 185, 129, 0.5);
+    }
+
+    .tab-btn.solved::before {
+      content: '✓';
+      color: #10b981;
+      font-weight: bold;
+    }
+
+    /* TAB CONTENT PANELS */
+    .tab-panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* CARD STYLING */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 2rem;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
+      position: relative;
+    }
+
+    .card.completed {
+      border-color: rgba(16, 185, 129, 0.6);
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.15);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .tag-badge {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 0.3rem 0.7rem;
+      border-radius: 6px;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .tag-elements { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .tag-console { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+    .tag-sources { background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
+    .tag-network { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .tag-application { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    .diff-badge {
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .card-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 0.5rem;
+    }
+
+    .mission-scenario {
+      color: #cbd5e1;
+      font-size: 0.98rem;
+      line-height: 1.65;
+      margin-bottom: 1.5rem;
+    }
+
+    /* PLAYGROUND TARGET BOX */
+    .playground {
+      background: rgba(3, 7, 18, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .playground-title {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* FORM & BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.4rem;
+      font-weight: 600;
+      font-size: 0.92rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #ffffff;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #38bdf8, #0284c7);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.45);
+    }
+
+    .btn:disabled {
+      background: #1e293b;
+      color: #64748b;
+      cursor: not-allowed;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: none;
+    }
+
+    .btn-accent {
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      color: #fff;
+    }
+    .btn-accent:hover:not(:disabled) {
+      background: linear-gradient(135deg, #a855f7, #7c3aed);
+      transform: translateY(-2px);
+    }
+
+    .input-field {
+      width: 100%;
+      background: #030712;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      color: #fff;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--accent-cyan-glow);
+    }
+
+    /* CODE & SNIPPET */
+    code {
+      font-family: 'Fira Code', monospace;
+      background: var(--code-bg);
+      color: #38bdf8;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.88em;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* HINT ACCORDION */
+    details.hint-accordion {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px dashed rgba(245, 158, 11, 0.3);
+      border-radius: 10px;
+      padding: 0.75rem 1.1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    details.hint-accordion summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--accent-amber);
+      user-select: none;
+      outline: none;
+    }
+
+    details.hint-accordion .hint-content {
+      margin-top: 0.85rem;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      line-height: 1.6;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 0.85rem;
+    }
+
+    /* FLAG SUBMISSION AREA */
+    .flag-section {
+      background: rgba(16, 185, 129, 0.05);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .flag-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--accent-emerald);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .flag-form {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .flag-input {
+      flex: 1;
+      background: #030712;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 8px;
+      padding: 0.7rem 1rem;
+      color: #fff;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.92rem;
+    }
+
+    .flag-input:focus {
+      outline: none;
+      border-color: var(--accent-emerald);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+    }
+
+    .flag-btn {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      padding: 0.7rem 1.4rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .flag-btn:hover {
+      background: linear-gradient(135deg, #34d399, #10b981);
+      transform: translateY(-2px);
+    }
+
+    /* RESULT ALERTS */
+    .alert-box {
+      display: none;
+      padding: 1rem 1.25rem;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      margin-top: 1rem;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+
+    .alert-error {
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.4);
+      color: #fb7185;
+    }
+
+    .alert-info {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+    }
+
+    /* CHALLENGE 1 SPECIFIC STYLES: SHADOW OVERLAY TRAP */
+    .citadel-container {
+      position: relative;
+      padding: 1rem;
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+    }
+
+    #citadel-overlay-blocker {
+      position: absolute;
+      inset: 0;
+      background: rgba(244, 63, 94, 0.08);
+      z-index: 50;
+      cursor: not-allowed;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fb7185;
+      font-size: 0.85rem;
+      font-weight: 600;
+      backdrop-filter: blur(2px);
+    }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      margin-top: 3.5rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    footer a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- HEADER -->
+    <header>
+      <div class="badge-pill">🛡️ PILAR 3: WEB EXPLOITATION • LAB 03 (CTF SEDANG)</div>
+      <h1>CTF DevTools 5-Tab Mastery</h1>
+      <p class="subtitle">
+        Tantangan tingkat menengah (Medium Difficulty). Taklukkan 5 domain vital DevTools:
+        <strong>Elements</strong>, <strong>Console</strong>, <strong>Sources</strong>, <strong>Network</strong>, dan <strong>Application</strong>.
+      </p>
+    </header>
+
+    <!-- SCOREBOARD -->
+    <div class="scoreboard-box">
+      <div class="stats-row">
+        <div class="stat-item">
+          <span style="font-size: 1.7rem;">🏆</span>
+          <div>
+            <div class="stat-label">Total Skor CTF</div>
+            <div class="stat-value" id="score-counter">0 / 500 PTS</div>
+          </div>
+        </div>
+        <div class="stat-item">
+          <span style="font-size: 1.7rem;">🚩</span>
+          <div>
+            <div class="stat-label">Flag Terpecahkan</div>
+            <div class="stat-value" id="flag-counter">0 / 5 Solved</div>
+          </div>
+        </div>
+        <div>
+          <button class="reset-btn" onclick="resetCTFProgress()">🔄 Reset Progres Lab</button>
+        </div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+
+    <!-- 5-TAB NAVIGATION -->
+    <nav class="tabs-nav" id="tabs-nav">
+      <button class="tab-btn active" data-tab="tab-1" onclick="switchTab('tab-1')">
+        <span>1. Tab Elements</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-2" onclick="switchTab('tab-2')">
+        <span>2. Tab Console</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-3" onclick="switchTab('tab-3')">
+        <span>3. Tab Sources</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-4" onclick="switchTab('tab-4')">
+        <span>4. Tab Network</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-5" onclick="switchTab('tab-5')">
+        <span>5. Tab Application</span>
+      </button>
+    </nav>
+
+
+    <!-- =========================================================
+         TAB 1: ELEMENTS (DOM Integrity & Shadow Traps)
+    ========================================================== -->
+    <section class="tab-panel active" id="tab-1">
+      <div class="card" id="card-tab-1">
+        <div class="card-header">
+          <div>
+            <span class="tag-badge tag-elements">🎯 Tab Elements</span>
+            <span class="diff-badge">⚡ Medium • 100 PTS</span>
+            <h2 class="card-title">Tantangan 1: Invisible Shield & DOM Integrity Mutation</h2>
+          </div>
+          <span class="tag-badge" id="status-badge-1" style="background: rgba(255,255,255,0.08); color: var(--text-muted);">
+            Belum Terpecahkan
+          </span>
+        </div>
+
+        <p class="mission-scenario">
+          Gerbang akses brankas digital <strong>"Citadel-Zero"</strong> dilindungi oleh sistem proteksi berlapis pada DOM.
+          Tombol otorisasi ditutupi lapisan pelindung anti-klik transparan, tombol terkunci dengan atribut <code>disabled</code>, 
+          dan fungsi verifikasi menuntut atribut data integritas <code>data-clearance="1337"</code> serta 
+          <code>data-auth-hash="SUPERVISOR_BYPASS"</code>. Selain itu, bagian rahasia flag disembunyikan di dalam tag <code>&lt;template&gt;</code> tersembunyi!
+        </p>
+
+        <details class="hint-accordion">
+          <summary>💡 Petunjuk Analisis (Tab Elements)</summary>
+          <div class="hint-content">
+            <strong>Langkah Eksploitasi:</strong><br>
+            1. Buka <strong>Inspect Element</strong> (`Ctrl + Shift + C` atau `F12` $\rightarrow$ Elements).<br>
+            2. Temukan dan hapus elemen perisai transparan: <code>&lt;div id="citadel-overlay-blocker" ...&gt;</code>.<br>
+            3. Pada tag tombol <code>&lt;button id="btn-citadel-claim" ...&gt;</code>:<br>
+               - Hapus atribut <code>disabled=""</code>.<br>
+               - Ubah atribut <code>data-clearance="0"</code> menjadi <code>data-clearance="1337"</code>.<br>
+               - Ubah atribut <code>data-auth-hash="unverified"</code> menjadi <code>data-auth-hash="SUPERVISOR_BYPASS"</code>.<br>
+            4. Klik tombol "Claim Citadel Clearance" yang sekarang dapat diakses. Flag akan digenerate otomatis!
+          </div>
+        </details>
+
+        <div class="playground">
+          <div class="playground-title">🎯 Target Sandbox: Citadel-Zero Control Gate</div>
+          
+          <div class="citadel-container">
+            <!-- OVERLAY BLOCKER (TRAP ELEMENT) -->
+            <div id="citadel-overlay-blocker">
+              🛡️ [SHIELD ACTIVE] Lapisan Pelindung Anti-Click Aktif. Hapus elemen ini via Tab Elements!
+            </div>
+
+            <!-- HIDDEN TEMPLATE FRAGMENT -->
+            <template id="citadel-secrets" data-salt="D3V_3L3M3NT5_8819"></template>
+
+            <!-- TARGET FORM -->
+            <div style="margin-bottom: 1rem; color: #94a3b8; font-size: 0.9rem;">
+              Status Clearance Terbaca: <code id="citadel-status-disp">Tier-0 (Untrusted)</code>
+            </div>
+
+            <button 
+              id="btn-citadel-claim" 
+              class="btn btn-primary" 
+              disabled 
+              data-clearance="0" 
+              data-auth-hash="unverified"
+              onclick="executeCitadelBypass()"
+              style="width: 100%;">
+              🔒 Claim Citadel Clearance (Terkunci)
+            </button>
+          </div>
+
+          <div id="alert-tab-1" class="alert-box"></div>
+        </div>
+
+        <!-- FLAG SUBMISSION FORM -->
+        <div class="flag-section">
+          <div class="flag-title">🚩 Submit Flag Tantangan 1</div>
+          <form class="flag-form" onsubmit="event.preventDefault(); verifyFlag(1);">
+            <input type="text" id="flag-input-1" class="flag-input" placeholder="FLAG{...}">
+            <button type="submit" class="flag-btn">Submit</button>
+          </form>
+          <div id="flag-msg-1" style="margin-top: 0.5rem; font-size: 0.88rem;"></div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =========================================================
+         TAB 2: CONSOLE (Memory Hooking & Prototype Manipulation)
+    ========================================================== -->
+    <section class="tab-panel" id="tab-2">
+      <div class="card" id="card-tab-2">
+        <div class="card-header">
+          <div>
+            <span class="tag-badge tag-console">🎯 Tab Console</span>
+            <span class="diff-badge">⚡ Medium • 100 PTS</span>
+            <h2 class="card-title">Tantangan 2: Memory Hooking & Function Monkey-Patching</h2>
+          </div>
+          <span class="tag-badge" id="status-badge-2" style="background: rgba(255,255,255,0.08); color: var(--text-muted);">
+            Belum Terpecahkan
+          </span>
+        </div>
+
+        <p class="mission-scenario">
+          Modul kriptografi bank <code>window.CryptoShield</code> dimuat ke memori browser. 
+          Metode <code>CryptoShield.deobfuscateVault()</code> menyimpan ciphertext flag dalam hex, tetapi menolak mendekripsi 
+          karena metode validator <code>CryptoShield.isMasterKeyValid()</code> selalu mengembalikan <code>false</code>.
+          Tugasmu: Buka tab Console, lakukan <strong>monkey-patching</strong> pada fungsi validator atau dekripsi string hex secara manual!
+        </p>
+
+        <details class="hint-accordion">
+          <summary>💡 Petunjuk Analisis (Tab Console)</summary>
+          <div class="hint-content">
+            <strong>Langkah Eksploitasi:</strong><br>
+            1. Buka tab <strong>Console</strong> (`F12` $\rightarrow$ Console).<br>
+            2. Ketik nama objek untuk menginspeksi: <code>CryptoShield</code> lalu tekan Enter.<br>
+            3. Amati fungsi <code>isMasterKeyValid</code>. Tulis ulang (monkey-patch) fungsi tersebut di console:<br>
+               <code>CryptoShield.isMasterKeyValid = function() { return true; };</code><br>
+            4. Panggil fungsinya: <code>CryptoShield.deobfuscateVault()</code> atau klik tombol <strong>"Jalankan Validasi Memori"</strong> di bawah!<br>
+            5. Flag akan tertera di Console dan layar.
+          </div>
+        </details>
+
+        <div class="playground">
+          <div class="playground-title">🎯 Target Sandbox: CryptoShield Memory Core</div>
+          
+          <div style="margin-bottom: 1rem; color: #94a3b8; font-size: 0.9rem;">
+            Objek Terdaftar: <code>window.CryptoShield</code> | Status Validator: <code id="crypto-validator-status">isMasterKeyValid() === false</code>
+          </div>
+
+          <button class="btn btn-accent" onclick="runCryptoShieldChallenge()" style="width: 100%;">
+            ⚡ Jalankan Validasi Memori (CryptoShield)
+          </button>
+
+          <div id="alert-tab-2" class="alert-box"></div>
+        </div>
+
+        <!-- FLAG SUBMISSION FORM -->
+        <div class="flag-section">
+          <div class="flag-title">🚩 Submit Flag Tantangan 2</div>
+          <form class="flag-form" onsubmit="event.preventDefault(); verifyFlag(2);">
+            <input type="text" id="flag-input-2" class="flag-input" placeholder="FLAG{...}">
+            <button type="submit" class="flag-btn">Submit</button>
+          </form>
+          <div id="flag-msg-2" style="margin-top: 0.5rem; font-size: 0.88rem;"></div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =========================================================
+         TAB 3: SOURCES (Debugger Breakpoint & Scope Sniping)
+    ========================================================== -->
+    <section class="tab-panel" id="tab-3">
+      <div class="card" id="card-tab-3">
+        <div class="card-header">
+          <div>
+            <span class="tag-badge tag-sources">🎯 Tab Sources</span>
+            <span class="diff-badge">⚡ Medium • 100 PTS</span>
+            <h2 class="card-title">Tantangan 3: The Ephemeral Race: Debugger Breakpoint</h2>
+          </div>
+          <span class="tag-badge" id="status-badge-3" style="background: rgba(255,255,255,0.08); color: var(--text-muted);">
+            Belum Terpecahkan
+          </span>
+        </div>
+
+        <p class="mission-scenario">
+          Sistem pertahanan memuat skrip terpisah <code>challenge_sources_vault.js</code>. 
+          Ketika tombol clearance diklik, fungsi <code>SourcesVaultEngine.generateClearanceKey()</code> merakit flag rahasia ke dalam 
+          variabel lokal <code>ephemeralClearanceFlag</code>, tetapi dalam waktu <strong>50 milidetik</strong> variabel tersebut 
+          langsung dimusnahkan (`null`). Kamu tidak bisa melihatnya di layar ataupun console biasa—kamu harus menghentikan waktu browser dengan <strong>Breakpoint</strong>!
+        </p>
+
+        <details class="hint-accordion">
+          <summary>💡 Petunjuk Analisis (Tab Sources)</summary>
+          <div class="hint-content">
+            <strong>Langkah Eksploitasi:</strong><br>
+            1. Buka tab <strong>Sources</strong> (`F12` $\rightarrow$ Sources).<br>
+            2. Di panel kiri, cari dan buka file <code>challenge_sources_vault.js</code>.<br>
+            3. Temukan baris di mana <code>let ephemeralClearanceFlag = ...</code> dirakit.<br>
+            4. Pasang <strong>Breakpoint</strong> dengan mengklik nomor baris tersebut (akan muncul tanda biru/panah).<br>
+            5. Kembali ke halaman ini dan klik tombol <strong>"Generate Key di Memori"</strong>.<br>
+            6. Browser akan seketika membeku (<strong>Paused in debugger</strong>)!<br>
+            7. Lihat di panel kanan <strong>Scope $\rightarrow$ Local</strong>, atau arahkan kursor ke variabel <code>ephemeralClearanceFlag</code> untuk meng-copy flag!
+          </div>
+        </details>
+
+        <div class="playground">
+          <div class="playground-title">🎯 Target Sandbox: Ephemeral Memory Generator</div>
+          
+          <div style="margin-bottom: 1.25rem;">
+            Target Script: <code>challenge_sources_vault.js</code><br>
+            <span style="font-size: 0.85rem; color: #94a3b8;">Waktu paruh memori: 50 ms sebelum self-destruct routine diaktifkan.</span>
+          </div>
+
+          <button class="btn btn-primary" onclick="window.SourcesVaultEngine.generateClearanceKey()" style="width: 100%;">
+            ⏱️ Generate Key di Memori (50ms Lifetime)
+          </button>
+
+          <div id="sources-result-box" style="margin-top: 1rem;"></div>
+        </div>
+
+        <!-- FLAG SUBMISSION FORM -->
+        <div class="flag-section">
+          <div class="flag-title">🚩 Submit Flag Tantangan 3</div>
+          <form class="flag-form" onsubmit="event.preventDefault(); verifyFlag(3);">
+            <input type="text" id="flag-input-3" class="flag-input" placeholder="FLAG{...}">
+            <button type="submit" class="flag-btn">Submit</button>
+          </form>
+          <div id="flag-msg-3" style="margin-top: 0.5rem; font-size: 0.88rem;"></div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =========================================================
+         TAB 4: NETWORK (Multi-Stage API Recon & Endpoint Hunt)
+    ========================================================== -->
+    <section class="tab-panel" id="tab-4">
+      <div class="card" id="card-tab-4">
+        <div class="card-header">
+          <div>
+            <span class="tag-badge tag-network">🎯 Tab Network</span>
+            <span class="diff-badge">⚡ Medium • 100 PTS</span>
+            <h2 class="card-title">Tantangan 4: Multi-Stage API Recon & Information Disclosure</h2>
+          </div>
+          <span class="tag-badge" id="status-badge-4" style="background: rgba(255,255,255,0.08); color: var(--text-muted);">
+            Belum Terpecahkan
+          </span>
+        </div>
+
+        <p class="mission-scenario">
+          Panel kontrol melakukan panggilan latar belakang (AJAX/Fetch) untuk meminta status telemetri server. 
+          Tampilan layar hanya menyajikan data publik biasa, namun di dalam aliran respon data mentah HTTP (Network response) 
+          terdapat kebocoran informasi rute endpoint internal tersembunyi. Telusuri rantai permintaan Network untuk menemukan flag supervisor!
+        </p>
+
+        <details class="hint-accordion">
+          <summary>💡 Petunjuk Analisis (Tab Network)</summary>
+          <div class="hint-content">
+            <strong>Langkah Eksploitasi:</strong><br>
+            1. Buka tab <strong>Network</strong> (`F12` $\rightarrow$ Network). Pastikan tombol rekam merah aktif.<br>
+            2. Klik tombol <strong>"Tarik Data Telemetri Server"</strong> di bawah.<br>
+            3. Amati request baru yang muncul bernama <code>api_telemetry_report.json</code>.<br>
+            4. Klik nama file tersebut $\rightarrow$ buka sub-tab <strong>Response</strong> atau <strong>Preview</strong>.<br>
+            5. Baca isi objek <code>diagnostics</code>: ada nama endpoint tahap kedua (<code>api_stage2_privilege.json</code>).<br>
+            6. Masukkan path endpoint tersebut ke kolom input di bawah atau buka langsung di browser untuk menangkap respon flag!
+          </div>
+        </details>
+
+        <div class="playground">
+          <div class="playground-title">🎯 Target Sandbox: MicroService Telemetry Hub</div>
+          
+          <button class="btn btn-primary" onclick="fetchTelemetryStage1()" style="margin-bottom: 1rem;">
+            📡 Tarik Data Telemetri Server (Stage 1)
+          </button>
+
+          <div id="telemetry-display-box" style="background: #030712; padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); font-family: 'Fira Code', monospace; font-size: 0.85rem; color: #94a3b8; display: none;">
+            <!-- DYNAMIC TELEMETRY -->
+          </div>
+
+          <div style="margin-top: 1.5rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 1rem;">
+            <label style="font-size: 0.88rem; color: #cbd5e1; display: block; margin-bottom: 0.5rem;">
+              🔎 Masukkan Rute Endpoint Rahasia yang Kamu Temukan di Tab Network:
+            </label>
+            <div style="display: flex; gap: 0.75rem;">
+              <input type="text" id="endpoint-recon-input" class="input-field" style="margin: 0;" placeholder="contoh: ./api_stage2_...json">
+              <button class="btn btn-accent" onclick="fetchReconStage2()">Kirim Request</button>
+            </div>
+          </div>
+
+          <div id="alert-tab-4" class="alert-box"></div>
+        </div>
+
+        <!-- FLAG SUBMISSION FORM -->
+        <div class="flag-section">
+          <div class="flag-title">🚩 Submit Flag Tantangan 4</div>
+          <form class="flag-form" onsubmit="event.preventDefault(); verifyFlag(4);">
+            <input type="text" id="flag-input-4" class="flag-input" placeholder="FLAG{...}">
+            <button type="submit" class="flag-btn">Submit</button>
+          </form>
+          <div id="flag-msg-4" style="margin-top: 0.5rem; font-size: 0.88rem;"></div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =========================================================
+         TAB 5: APPLICATION / STORAGE (JWT None Alg & Session Forgery)
+    ========================================================== -->
+    <section class="tab-panel" id="tab-5">
+      <div class="card" id="card-tab-5">
+        <div class="card-header">
+          <div>
+            <span class="tag-badge tag-application">🎯 Tab Application</span>
+            <span class="diff-badge">⚡ Medium • 100 PTS</span>
+            <h2 class="card-title">Tantangan 5: Unsigned JWT 'None' Algorithm & Session Forgery</h2>
+          </div>
+          <span class="tag-badge" id="status-badge-5" style="background: rgba(255,255,255,0.08); color: var(--text-muted);">
+            Belum Terpecahkan
+          </span>
+        </div>
+
+        <p class="mission-scenario">
+          Aplikasi modern ini menyimpan tiket sesi di dalam <strong>Session Storage</strong> dengan nama <code>auth_bearer_token</code> 
+          dalam format JSON Web Token (JWT). Tiket saat ini hanya memiliki role <code>guest</code>.
+          Sistem memiliki kelemahan arsitektur fatal: parser JWT menerima algoritma <code>"none"</code> tanpa tanda tangan!
+          Tugasmu: Bedah token di tab Application, ubah role menjadi <code>admin</code>, set algoritma ke <code>none</code>, dan dapatkan bendera otoritas tertinggi!
+        </p>
+
+        <details class="hint-accordion">
+          <summary>💡 Petunjuk Analisis (Tab Application & JWT)</summary>
+          <div class="hint-content">
+            <strong>Langkah Eksploitasi:</strong><br>
+            1. Buka tab <strong>Application</strong> (`F12` $\rightarrow$ Application $\rightarrow$ Storage $\rightarrow$ <strong>Session Storage</strong>).<br>
+            2. Temukan kunci <code>auth_bearer_token</code>. Token berformat: <code>Header.Payload.Signature</code>.<br>
+            3. Amati bagian payload (bagian kedua di antara dua tanda titik): didecode dari Base64 menghasilkan:<br>
+               <code>{"user":"guest_user","role":"guest","iat":1698200000}</code>.<br>
+            4. Ubah <code>role</code> menjadi <code>"admin"</code>, ubah header menjadi <code>{"alg":"none","typ":"JWT"}</code>.<br>
+            5. Encode kembali ke Base64 (bisa gunakan console: <code>btoa('{"alg":"none","typ":"JWT"}')</code> dan <code>btoa('{"user":"guest_user","role":"admin","iat":1698200000}')</code>).<br>
+            6. Susun token baru tanpa signature: <code>[Base64Header].[Base64Payload].</code> (akhiri dengan tanda titik).<br>
+               Contoh: <code>eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VyIjoiZ3Vlc3RfdXNlciIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTY5ODIwMDAwMH0.</code><br>
+            7. Simpan nilai baru tersebut di Session Storage, lalu klik tombol <strong>"Verifikasi Tiket Sesi JWT"</strong>!
+          </div>
+        </details>
+
+        <div class="playground">
+          <div class="playground-title">🎯 Target Sandbox: Sovereign JWT Authentication Gate</div>
+          
+          <div style="margin-bottom: 1rem; color: #94a3b8; font-size: 0.9rem;">
+            Lokasi Tiket: <code>SessionStorage['auth_bearer_token']</code><br>
+            Status Saat Ini: <code id="session-role-display">Mendeteksi token...</code>
+          </div>
+
+          <button class="btn btn-primary" onclick="verifySessionJWT()" style="width: 100%;">
+            🔑 Verifikasi Tiket Sesi JWT
+          </button>
+
+          <div id="alert-tab-5" class="alert-box"></div>
+        </div>
+
+        <!-- FLAG SUBMISSION FORM -->
+        <div class="flag-section">
+          <div class="flag-title">🚩 Submit Flag Tantangan 5</div>
+          <form class="flag-form" onsubmit="event.preventDefault(); verifyFlag(5);">
+            <input type="text" id="flag-input-5" class="flag-input" placeholder="FLAG{...}">
+            <button type="submit" class="flag-btn">Submit</button>
+          </form>
+          <div id="flag-msg-5" style="margin-top: 0.5rem; font-size: 0.88rem;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+      <p>Pilar 3: Web Exploitation • Cybersecurity Training Ground</p>
+      <p style="font-size: 0.8rem; margin-top: 0.25rem;">
+        Dirancang untuk pembelajaran etikal & persiapan kompetisi CTF (Capture The Flag).
+      </p>
+    </footer>
+
+  </div>
+
+
+  <!-- =========================================================
+       EXTERNAL SCRIPT FOR TAB 3 (SOURCES BREAKPOINT CHALLENGE)
+  ========================================================== -->
+  <script src="./challenge_sources_vault.js"></script>
+
+  <!-- =========================================================
+       LAB CORE LOGIC & CTF PLATFORM ENGINE
+  ========================================================== -->
+  <script>
+    // ==========================================
+    // CTF STATE & PROGRESS MANAGEMENT
+    // ==========================================
+    const CTF_FLAGS = {
+      1: "FLAG{DOM_MUT4T10N_D3V_3L3M3NT5_8819}",
+      2: "FLAG{C0NS0L3_M0NK3Y_P4TCH_PR0T0_3371}",
+      3: "FLAG{S0URC3S_BR34KP01NT_SC0P3_C4PTUR3_5521}",
+      4: "FLAG{N3TW0RK_TR4FF1C_4P1_D1SC0V3RY_7742}",
+      5: "FLAG{JWT_N0N3_4LG_ST0R4G3_F0RG3RY_9904}"
+    };
+
+    let userSolved = {
+      1: false,
+      2: false,
+      3: false,
+      4: false,
+      5: false
+    };
+
+    // Load progress from localStorage
+    function loadProgress() {
+      const saved = localStorage.getItem('ctf_devtools_medium_state');
+      if (saved) {
+        try {
+          userSolved = JSON.parse(saved);
+        } catch (e) {
+          console.error("Gagal membaca progres tersimpan.");
+        }
+      }
+      renderScoreboard();
+    }
+
+    function saveProgress() {
+      localStorage.setItem('ctf_devtools_medium_state', JSON.stringify(userSolved));
+      renderScoreboard();
+    }
+
+    function resetCTFProgress() {
+      if (confirm("Apakah kamu yakin ingin mereset seluruh progres tantangan CTF ini?")) {
+        userSolved = { 1: false, 2: false, 3: false, 4: false, 5: false };
+        localStorage.removeItem('ctf_devtools_medium_state');
+        initChallenge5Token();
+        renderScoreboard();
+        location.reload();
+      }
+    }
+
+    function renderScoreboard() {
+      let solvedCount = 0;
+      for (let i = 1; i <= 5; i++) {
+        const isDone = userSolved[i] === true;
+        const tabBtn = document.querySelector(`.tab-btn[data-tab="tab-${i}"]`);
+        const badge = document.getElementById(`status-badge-${i}`);
+        const card = document.getElementById(`card-tab-${i}`);
+        const flagInput = document.getElementById(`flag-input-${i}`);
+        const flagMsg = document.getElementById(`flag-msg-${i}`);
+
+        if (isDone) {
+          solvedCount++;
+          if (tabBtn) tabBtn.classList.add('solved');
+          if (badge) {
+            badge.style.background = 'rgba(16, 185, 129, 0.2)';
+            badge.style.color = '#34d399';
+            badge.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+            badge.textContent = '✓ Terpecahkan (+100 PTS)';
+          }
+          if (card) card.classList.add('completed');
+          if (flagInput) {
+            flagInput.value = CTF_FLAGS[i];
+            flagInput.disabled = true;
+          }
+          if (flagMsg) {
+            flagMsg.innerHTML = '<span style="color: #34d399; font-weight: 600;">✓ Flag terkonfirmasi benar! Tantangan selesai.</span>';
+          }
+        } else {
+          if (tabBtn) tabBtn.classList.remove('solved');
+          if (card) card.classList.remove('completed');
+        }
+      }
+
+      const totalScore = solvedCount * 100;
+      const percent = (solvedCount / 5) * 100;
+      document.getElementById('score-counter').textContent = `${totalScore} / 500 PTS`;
+      document.getElementById('flag-counter').textContent = `${solvedCount} / 5 Solved`;
+      document.getElementById('progress-fill').style.width = `${percent}%`;
+    }
+
+    // Flag Verification Function
+    function verifyFlag(challengeNum) {
+      const input = document.getElementById(`flag-input-${challengeNum}`);
+      const msg = document.getElementById(`flag-msg-${challengeNum}`);
+      const entered = input.value.trim();
+
+      if (entered === CTF_FLAGS[challengeNum]) {
+        userSolved[challengeNum] = true;
+        saveProgress();
+        msg.innerHTML = '<span style="color: #34d399; font-weight: bold;">🎉 FLAG BENAR! +100 Poin ditambahkan. Kerja bagus!</span>';
+      } else {
+        msg.innerHTML = '<span style="color: #fb7185; font-weight: 600;">❌ Flag salah! Periksa kembali hasil eksploitasi kamu.</span>';
+      }
+    }
+
+
+    // ==========================================
+    // TAB SWITCHING NAVIGATION
+    // ==========================================
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+
+      const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+      const activePanel = document.getElementById(tabId);
+
+      if (activeBtn) activeBtn.classList.add('active');
+      if (activePanel) activePanel.classList.add('active');
+    }
+
+
+    // ==========================================
+    // LOGIKA TANTANGAN 1: TAB ELEMENTS
+    // ==========================================
+    function executeCitadelBypass() {
+      const btn = document.getElementById('btn-citadel-claim');
+      const alertBox = document.getElementById('alert-tab-1');
+      const statusDisp = document.getElementById('citadel-status-disp');
+
+      const clearance = btn.getAttribute('data-clearance');
+      const authHash = btn.getAttribute('data-auth-hash');
+      const template = document.getElementById('citadel-secrets');
+      const salt = template ? template.getAttribute('data-salt') : '';
+
+      if (clearance === '1337' && authHash === 'SUPERVISOR_BYPASS') {
+        const flag = `FLAG{DOM_MUT4T10N_${salt}}`;
+        statusDisp.innerHTML = '<strong style="color: #34d399;">Tier-1337 (Super Admin Root Granted)</strong>';
+        showAlert(alertBox, 'success', `
+          🎉 <strong>BERHASIL MENEMBUS PERISAI CITADEL!</strong><br>
+          Kamu berhasil menghapus overlay blocker, mengaktifkan tombol, dan memodifikasi atribut data integritas DOM.<br>
+          Ditemukan Flag: <code style="font-size: 1.05rem; color: #fff;">${flag}</code><br>
+          <em>Salin flag di atas dan submit di kotak formulir flag!</em>
+        `);
+      } else {
+        showAlert(alertBox, 'error', `
+          ❌ <strong>Akses Ditolak!</strong> Atribut integritas tidak valid:<br>
+          • <code>data-clearance</code>: <code>${clearance}</code> (Diperlukan: <code>1337</code>)<br>
+          • <code>data-auth-hash</code>: <code>${authHash}</code> (Diperlukan: <code>SUPERVISOR_BYPASS</code>)<br>
+          Buka tab <strong>Elements</strong> dan modifikasi kedua atribut tag <code>&lt;button&gt;</code> ini!
+        `);
+      }
+    }
+
+
+    // ==========================================
+    // LOGIKA TANTANGAN 2: TAB CONSOLE
+    // ==========================================
+    // Inisialisasi Objek Global di Memori
+    window.CryptoShield = {
+      _entropyPool: "464c41477b43304e53304c335f4d304e4b33595f50345443485f50523054305f333337317d",
+      isMasterKeyValid: function() {
+        return false; // Mengembalikan false secara default
+      },
+      deobfuscateVault: function() {
+        const alertBox = document.getElementById('alert-tab-2');
+        const validatorStatus = document.getElementById('crypto-validator-status');
+
+        if (!this.isMasterKeyValid()) {
+          console.warn("%c[CryptoShield] ❌ Akses Ditolak! isMasterKeyValid() bernilai false. Lakukan monkey-patching di Console!", "color: #f43f5e; font-weight: bold; font-size: 1rem;");
+          if (alertBox) {
+            showAlert(alertBox, 'error', `
+              ❌ <strong>Validasi Ditolak oleh Memory Shield!</strong><br>
+              Metode <code>CryptoShield.isMasterKeyValid()</code> mengembalikan <code>false</code>.<br>
+              Buka tab <strong>Console</strong>, lalu timpa fungsinya dengan: <br>
+              <code>CryptoShield.isMasterKeyValid = function() { return true; };</code><br>
+              Lalu klik tombol ini lagi!
+            `);
+          }
+          return "DENIED";
+        }
+
+        // Dekode Hex ke ASCII
+        let hex = this._entropyPool;
+        let flagStr = '';
+        for (let i = 0; i < hex.length; i += 2) {
+          flagStr += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+        }
+
+        console.log("%c[CryptoShield] 🎉 ACCESS GRANTED! Flag: " + flagStr, "color: #10b981; font-weight: bold; font-size: 1.15rem; background: #030712; padding: 6px; border-radius: 4px;");
+
+        if (validatorStatus) validatorStatus.innerHTML = '<strong style="color: #34d399;">isMasterKeyValid() === true (PATCHED)</strong>';
+        if (alertBox) {
+          showAlert(alertBox, 'success', `
+            🎉 <strong>MONKEY-PATCHING MEMORY SUKSES!</strong><br>
+            Kamu berhasil merekayasa ulang fungsi validator di runtime JavaScript Console!<br>
+            Flag Ditemukan: <code style="font-size: 1.05rem; color: #fff;">${flagStr}</code>
+          `);
+        }
+        return flagStr;
+      }
+    };
+
+    function runCryptoShieldChallenge() {
+      window.CryptoShield.deobfuscateVault();
+    }
+
+
+    // ==========================================
+    // LOGIKA TANTANGAN 4: TAB NETWORK
+    // ==========================================
+    async function fetchTelemetryStage1() {
+      const displayBox = document.getElementById('telemetry-display-box');
+      const alertBox = document.getElementById('alert-tab-4');
+      
+      displayBox.style.display = 'block';
+      displayBox.innerHTML = '⏳ Menghubungi backend telemetri... Cek Tab Network (`F12`)!';
+
+      try {
+        const res = await fetch('./api_telemetry_report.json');
+        const data = await res.json();
+
+        displayBox.innerHTML = `
+          <strong>[Status Telemetri Publik]:</strong><br>
+          • Status Sistem: <span style="color: #34d399;">${data.system_status}</span><br>
+          • Versi Build: ${data.build_version}<br>
+          • Latency: ${data.telemetry.latency_ms} ms | Klaster: ${data.telemetry.cluster_health}<br>
+          <em style="color: #f59e0b;">Catatan: Data sensitif tidak ditampilkan di UI. Buka Tab Network $\rightarrow$ api_telemetry_report.json $\rightarrow$ Response!</em>
+        `;
+
+        console.log("%c[Network Recon] Request telemetri berhasil dikirim. Periksa respon lengkap di Tab Network!", "color: #38bdf8; font-style: italic;");
+      } catch (err) {
+        displayBox.innerHTML = '<span style="color: #f43f5e;">Gagal memuat API. Pastikan lab dijalankan melalui web server lokal (Live Server).</span>';
+      }
+    }
+
+    async function fetchReconStage2() {
+      const inputVal = document.getElementById('endpoint-recon-input').value.trim();
+      const alertBox = document.getElementById('alert-tab-4');
+
+      if (!inputVal) {
+        showAlert(alertBox, 'error', 'Silakan masukkan rute file endpoint yang kamu temukan di dalam respon Network!');
+        return;
+      }
+
+      try {
+        const res = await fetch(inputVal);
+        if (!res.ok) throw new Error("HTTP Status: " + res.status);
+        const data = await res.json();
+
+        if (data.privileged_payload && data.privileged_payload.ctf_flag) {
+          showAlert(alertBox, 'success', `
+            🎉 <strong>RECON NETWORK BERHASIL! (Privilege Endpoint Discovered)</strong><br>
+            Respon server untuk rute <code>${inputVal}</code> membocorkan data rahasia supervisor!<br>
+            Flag: <code style="font-size: 1.05rem; color: #fff;">${data.privileged_payload.ctf_flag}</code>
+          `);
+        } else {
+          showAlert(alertBox, 'info', `File ditemukan, tetapi tidak mengandung payload privilege supervisor.`);
+        }
+      } catch (err) {
+        showAlert(alertBox, 'error', `❌ Gagal mengakses endpoint <code>${inputVal}</code>. Pastikan nama endpoint persis sesuai dengan yang tertera di respon <code>api_telemetry_report.json</code>!`);
+      }
+    }
+
+
+    // ==========================================
+    // LOGIKA TANTANGAN 5: TAB APPLICATION (JWT)
+    // ==========================================
+    function initChallenge5Token() {
+      // Inisialisasi token guest default jika belum ada
+      if (!sessionStorage.getItem('auth_bearer_token')) {
+        const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" })).replace(/=+$/, '');
+        const payload = btoa(JSON.stringify({ user: "guest_user", role: "guest", iat: 1698200000 })).replace(/=+$/, '');
+        const signature = "dummy_signature_hash_secure";
+        sessionStorage.setItem('auth_bearer_token', `${header}.${payload}.${signature}`);
+      }
+      updateSessionDisplay();
+    }
+
+    // Helper dekode Base64 yang tahan terhadap penghapusan padding '='
+    function decodeB64(str) {
+      if (!str) return null;
+      str = str.replace(/-/g, '+').replace(/_/g, '/');
+      while (str.length % 4) str += '=';
+      return JSON.parse(atob(str));
+    }
+
+    function updateSessionDisplay() {
+      const disp = document.getElementById('session-role-display');
+      const token = sessionStorage.getItem('auth_bearer_token');
+      if (!token) {
+        if (disp) disp.textContent = "Token tidak ditemukan di Session Storage!";
+        return;
+      }
+      try {
+        const parts = token.split('.');
+        const payload = decodeB64(parts[1]);
+        if (disp) disp.innerHTML = `User: <code>${payload.user || 'anon'}</code> | Role: <strong>${payload.role}</strong>`;
+      } catch (e) {
+        if (disp) disp.textContent = "Format token di SessionStorage tidak valid.";
+      }
+    }
+
+    function verifySessionJWT() {
+      const alertBox = document.getElementById('alert-tab-5');
+      const token = sessionStorage.getItem('auth_bearer_token');
+
+      if (!token) {
+        showAlert(alertBox, 'error', 'Token <code>auth_bearer_token</code> tidak ditemukan di Session Storage!');
+        return;
+      }
+
+      const parts = token.split('.');
+      if (parts.length < 2) {
+        showAlert(alertBox, 'error', 'Format token tidak valid! Token JWT harus memiliki minimal format <code>Header.Payload.Signature</code>.');
+        return;
+      }
+
+      try {
+        const header = decodeB64(parts[0]);
+        const payload = decodeB64(parts[1]);
+
+        updateSessionDisplay();
+
+        const alg = header.alg ? header.alg.toLowerCase() : '';
+        const role = payload.role ? payload.role.toLowerCase() : '';
+
+        // Kerentanan 'none' algorithm
+        if (alg === 'none' && role === 'admin') {
+          const flag = CTF_FLAGS[5];
+          showAlert(alertBox, 'success', `
+            🎉 <strong>JWT 'NONE' ALGORITHM EXPLOIT SUKSES!</strong><br>
+            Parser menerima token tidak bertanda tangan dengan identitas <strong>admin</strong>!<br>
+            Flag Otoritas Penuh: <code style="font-size: 1.05rem; color: #fff;">${flag}</code>
+          `);
+        } else if (role !== 'admin') {
+          showAlert(alertBox, 'error', `
+            ❌ <strong>Hak Akses Ditolak!</strong> Role saat ini adalah <code>${role}</code>.<br>
+            Buka tab <strong>Application $\rightarrow$ Session Storage</strong>, lalu ubah <code>"role": "admin"</code> pada payload JWT!
+          `);
+        } else if (alg !== 'none') {
+          showAlert(alertBox, 'error', `
+            ❌ <strong>Verifikasi Signature Gagal!</strong> Header masih menggunakan algoritma <code>${header.alg}</code>.<br>
+            Sistem membutuhkan signature valid kecuali kamu mengeksploitasi kerentanan dengan mengubah header menjadi <code>{"alg":"none","typ":"JWT"}</code>!
+          `);
+        }
+      } catch (e) {
+        showAlert(alertBox, 'error', `❌ Gagal mem-parsing JWT: Pastikan hasil encode Base64 valid dan bertipe JSON.`);
+      }
+    }
+
+
+    // ==========================================
+    // UTILITY HELPER
+    // ==========================================
+    function showAlert(element, type, htmlMessage) {
+      if (!element) return;
+      element.className = `alert-box alert-${type}`;
+      element.innerHTML = htmlMessage;
+      element.style.display = 'block';
+    }
+
+    // Inisialisasi awal saat window siap
+    window.addEventListener('DOMContentLoaded', () => {
+      initChallenge5Token();
+      loadProgress();
+      console.log("%c[CTF DEVTOOLS MEDIUM LAB INITIALIZED]", "color: #38bdf8; font-weight: 800; font-size: 1.2rem;");
+      console.log("%cSelamat datang di Lab CTF DevTools Tingkat Sedang! Gunakan F12 untuk memulai misi eksploitasi.", "color: #94a3b8;");
+    });
+  </script>
+</body>
+</html>
